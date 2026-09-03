@@ -1,0 +1,10 @@
+.env
+
+# Local/runtime data
+grafana-data/
+
+# OS/editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

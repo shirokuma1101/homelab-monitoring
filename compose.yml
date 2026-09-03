@@ -1,0 +1,38 @@
+services:
+  grafana:
+    image: grafana/grafana:latest
+    container_name: monitoring-grafana
+    restart: unless-stopped
+    ports:
+      - 4000:3000
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+    networks:
+      - monitoring
+  graphite-exporter:
+    image: prom/graphite-exporter:v0.17.0
+    container_name: monitoring-graphite-exporter
+    restart: unless-stopped
+    command:
+      - --graphite.mapping-config=/etc/graphite-exporter/mappings/truenas.yml
+    ports:
+      # Prometheus scrape endpoint
+      - 9108:9108
+      # TrueNAS Graphite
+      - 9109:9109/tcp
+      - 9109:9109/udp
+    volumes:
+      - ./graphite-exporter/mappings:/etc/graphite-exporter/mappings:ro
+    networks:
+      - monitoring
+networks:
+  monitoring:
+    name: monitoring
+volumes:
+  grafana-data:
+    name: monitoring-grafana-data
