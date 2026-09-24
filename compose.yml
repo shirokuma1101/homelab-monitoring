@@ -30,9 +30,51 @@ services:
       - ./graphite-exporter/mappings:/etc/graphite-exporter/mappings:ro
     networks:
       - monitoring
+  tailscale:
+    image: tailscale/tailscale:stable
+    container_name: monitoring-tailscale
+    profiles: [tailscale-node]
+    restart: unless-stopped
+    environment:
+      TS_AUTHKEY: ${TAILSCALE_AUTHKEY:-}
+      TS_STATE_DIR: /var/lib/tailscale
+      TS_USERSPACE: "true"
+      TS_SOCKS5_SERVER: :1055
+      TS_EXTRA_ARGS: --accept-routes
+      TS_HOSTNAME: monitoring-scraper
+    volumes:
+      - tailscale-state:/var/lib/tailscale
+    networks:
+      - tailscale-scrape
+
+  vmagent:
+    image: victoriametrics/vmagent:v1.152.0
+    container_name: monitoring-vmagent
+    profiles: [tailscale-node]
+    restart: unless-stopped
+    command:
+      - -promscrape.config=/etc/vmagent/scrape.yml
+      - -remoteWrite.url=${VICTORIAMETRICS_REMOTE_WRITE_URL:-}
+      - -remoteWrite.tmpDataPath=/vmagent-data
+    environment:
+      NODE_EXPORTER_TARGET: ${NODE_EXPORTER_TARGET:-}
+      NODE_EXPORTER_JOB_NAME: ${NODE_EXPORTER_JOB_NAME:-node_exporter}
+      NODE_EXPORTER_INSTANCE: ${NODE_EXPORTER_INSTANCE:-shirokuma1101}
+    volumes:
+      - ./vmagent/scrape.yml:/etc/vmagent/scrape.yml:ro
+      - vmagent-data:/vmagent-data
+    depends_on:
+      - tailscale
+    networks:
+      - monitoring
+      - tailscale-scrape
+
 networks:
   monitoring:
     name: monitoring
+  tailscale-scrape:
 volumes:
   grafana-data:
     name: monitoring-grafana-data
+  tailscale-state:
+  vmagent-data:

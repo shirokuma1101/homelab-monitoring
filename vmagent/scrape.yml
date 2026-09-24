@@ -1,0 +1,10 @@
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: "%{NODE_EXPORTER_JOB_NAME}"
+    proxy_url: socks5://tailscale:1055
+    static_configs:
+      - targets: ["%{NODE_EXPORTER_TARGET}"]
+        labels:
+          instance: "%{NODE_EXPORTER_INSTANCE}"
