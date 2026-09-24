@@ -35,6 +35,8 @@ services:
     container_name: monitoring-tailscale
     profiles: [tailscale-node]
     restart: unless-stopped
+    ports:
+      - "${TAILSCALE_PROXY_BIND_ADDRESS:-127.0.0.1}:1055:1055"
     environment:
       TS_AUTHKEY: ${TAILSCALE_AUTHKEY:-}
       TS_STATE_DIR: /var/lib/tailscale
@@ -47,28 +49,6 @@ services:
     networks:
       - tailscale-scrape
 
-  vmagent:
-    image: victoriametrics/vmagent:v1.152.0
-    container_name: monitoring-vmagent
-    profiles: [tailscale-node]
-    restart: unless-stopped
-    command:
-      - -promscrape.config=/etc/vmagent/scrape.yml
-      - -remoteWrite.url=${VICTORIAMETRICS_REMOTE_WRITE_URL:-}
-      - -remoteWrite.tmpDataPath=/vmagent-data
-    environment:
-      NODE_EXPORTER_TARGET: ${NODE_EXPORTER_TARGET:-}
-      NODE_EXPORTER_JOB_NAME: ${NODE_EXPORTER_JOB_NAME:-node_exporter}
-      NODE_EXPORTER_INSTANCE: ${NODE_EXPORTER_INSTANCE:-shirokuma1101}
-    volumes:
-      - ./vmagent/scrape.yml:/etc/vmagent/scrape.yml:ro
-      - vmagent-data:/vmagent-data
-    depends_on:
-      - tailscale
-    networks:
-      - monitoring
-      - tailscale-scrape
-
 networks:
   monitoring:
     name: monitoring
@@ -77,4 +57,3 @@ volumes:
   grafana-data:
     name: monitoring-grafana-data
   tailscale-state:
-  vmagent-data:
