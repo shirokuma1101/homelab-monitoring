@@ -62,7 +62,7 @@ TrueNAS Web UIの**Reporting → Exporters**を開き、Graphite Exporterの設�
 | Namespace（旧UIのHostnameに相当） | TrueNASごとに一意な名前を指定する。Prometheusメトリクスの`instance`ラベルとして使用される |
 | Update Every | PrometheusまたはVictoriaMetrics側のscrape間隔に合わせる |
 | Send Names Instead Of Ids | 未指定のまま（デフォルト値を使用） |
-| Destination IP / Port | Dockerホスト上の`graphite_exporter`の宛先。この構成の受信ポートは`9109` |
+| Destination IP / Port | Dockerホスト上の`graphite_exporter`の宛先。この構成の受信ポートは`11002` |
 
 ### 5. メトリクスの更新を確認する
 
@@ -95,21 +95,21 @@ Prometheusまたはvmagentのscrape設定では、Exporterが生成したラベ�
   honor_labels: true
   static_configs:
     - targets:
-        - 192.168.1.42:9108
+        - 192.168.1.42:11001
 ```
 
 設定を変更したら、Prometheusまたはvmagentの設定を再読み込みするか、サービスを再起動します。
 
 ### Targets画面の`instance`について
 
-PrometheusのTargets画面には、引き続き`instance="192.168.1.42:9108"`と表示されます。これは`graphite_exporter`自体のスクレイプ先を示すターゲットラベルであり、異常ではありません。
+PrometheusのTargets画面には、引き続き`instance="192.168.1.42:11001"`と表示されます。これは`graphite_exporter`自体のスクレイプ先を示すターゲットラベルであり、異常ではありません。
 
 `honor_labels: true`はTargets画面の表示を変更する設定ではありません。Exporterが公開する各メトリクスに`instance="truenas-main"`や`instance="truenas-repl"`が含まれている場合に、そのラベルを保存時に優先します。そのため、次のような違いが生じます。
 
 | 対象 | `instance`の例 |
 | --- | --- |
-| PrometheusのTargets画面 | `192.168.1.42:9108` |
-| `up`などスクレイプ対象自体のメトリクス | `192.168.1.42:9108` |
+| PrometheusのTargets画面 | `192.168.1.42:11001` |
+| `up`などスクレイプ対象自体のメトリクス | `192.168.1.42:11001` |
 | TrueNASのメトリクス | `truenas-main`、`truenas-repl` |
 
 保存されたTrueNASメトリクスは、PromQLで確認できます。
@@ -121,7 +121,7 @@ count by (instance) ({job="truenas"})
 Exporterの出力を直接確認する場合は、次のコマンドを実行します。
 
 ```bash
-curl -s http://192.168.1.42:9108/metrics \
+curl -s http://192.168.1.42:11001/metrics \
   | grep 'instance="truenas-repl"' \
   | head
 ```
