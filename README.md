@@ -25,21 +25,21 @@ docker compose up -d
 起動後、Grafanaは次のURLで利用できます。
 
 ```text
-http://localhost:4000
+http://localhost:11000
 ```
 
 ## ポート
 
 | ポート | 用途 |
 | --- | --- |
-| `4000` | Grafana（コンテナの3000番） |
-| `9108` | Graphite ExporterのPrometheusメトリクス |
-| `9109/tcp` | TrueNAS Graphite受信 |
-| `9109/udp` | TrueNAS Graphite受信 |
+| `11000` | Grafana（コンテナの3000番） |
+| `11001` | Graphite ExporterのPrometheusメトリクス |
+| `11002/tcp` | TrueNAS Graphite受信 |
+| `11002/udp` | TrueNAS Graphite受信 |
 
 ## TrueNASの設定
 
-TrueNASのReporting設定でGraphite送信を有効にし、Graphite Exporterを実行しているホストのアドレスとポート `9109` を指定します。
+TrueNASのReporting設定でGraphite送信を有効にし、Graphite Exporterを実行しているホストのアドレスとポート `11002` を指定します。
 
 メトリクスのマッピングは [`graphite-exporter/mappings/truenas.yml`](graphite-exporter/mappings/truenas.yml) で管理しています。
 
@@ -60,7 +60,7 @@ DB 側の既存 `prometheus.yml` の `scrape_configs` に次の job を追加し
 
 ```yaml
   - job_name: node_exporter
-    proxy_url: socks5://<このホストのLAN IP>:1055
+    proxy_url: socks5://<このホストのLAN IP>:11003
     static_configs:
       - targets:
           - 192.168.2.10:9100
@@ -70,7 +70,7 @@ DB 側の既存 `prometheus.yml` の `scrape_configs` に次の job を追加し
 
 `proxy_url` は DB が Prometheus でも VictoriaMetrics の内蔵 scraper でも利用できます。DB 側で設定を再読み込みした後、`up{job="node_exporter",instance="shirokuma1101"}` が `1` になることを確認します。`192.168.2.10` を Tailscale 経由で取得するには、tailnet で対応するサブネットルートが広告・承認され、アクセスが許可されている必要があります。
 
-Tailscale はコンテナ内の userspace モードで動作し、ホストの TUN デバイスやルートは変更しません。`1055` 番は指定したホスト IP で公開されます。SOCKS5 プロキシには認証がないため、LAN のファイアウォールで DB ホストからの接続だけを許可してください。`.env` は Git の対象外で、Tailscale の状態は Docker ボリュームに保持されます。
+Tailscale はコンテナ内の userspace モードで動作し、ホストの TUN デバイスやルートは変更しません。`11003` 番は指定したホスト IP で公開されます。SOCKS5 プロキシには認証がないため、LAN のファイアウォールで DB ホストからの接続だけを許可してください。`.env` は Git の対象外で、Tailscale の状態は Docker ボリュームに保持されます。
 
 ### 既存の vmagent 構成からの切り替え
 
@@ -82,7 +82,7 @@ docker compose --profile tailscale-node up -d --no-deps tailscale
 docker compose --profile tailscale-node logs --tail=100 tailscale
 ```
 
-DB ホストから `curl --proxy socks5h://<このホストのLAN IP>:1055 http://192.168.2.10:9100/metrics` で接続を確認し、DB 側の `prometheus.yml` に上記 job を追加・再読み込みします。`up{job="node_exporter",instance="shirokuma1101"}` が `1` になった後、旧 vmagent が稼働していれば停止・削除します。
+DB ホストから `curl --proxy socks5h://<このホストのLAN IP>:11003 http://192.168.2.10:9100/metrics` で接続を確認し、DB 側の `prometheus.yml` に上記 job を追加・再読み込みします。`up{job="node_exporter",instance="shirokuma1101"}` が `1` になった後、旧 vmagent が稼働していれば停止・削除します。
 
 ```sh
 docker stop monitoring-vmagent
@@ -107,3 +107,7 @@ docker compose down
 ```
 
 `grafana-data` ボリュームにはGrafanaのデータが保存されます。
+
+## 既存環境のポート移行
+
+公開ポートのみ変更し、コンテナ内部のポート・Grafana/Tailscaleのボリューム・外部VictoriaMetricsの保存データは維持します。既存.envでポートを指定している場合は.env.exampleに合わせて更新してください。TrueNASのGraphite送信先を11002、外部DB側のGraphiteスクレイプ先を11001、SOCKS5 proxy_urlを11003へ更新し、ファイアウォールも合わせて変更します。スクレイプ先変更でinstanceラベルが変わる場合、過去系列は残りますが新しい系列になるため、継続性が必要なら既存instanceラベルを明示的に維持してください。送信先を切り替えるまで収集が途切れる可能性があります。反映はdocker compose up -dで行い、down -vは使用しません。
